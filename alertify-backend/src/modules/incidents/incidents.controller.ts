@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Get, Body, Query, HttpException, HttpStatus } from '@nestjs/common';
 import { IncidentsService } from './incidents.service';
 
 @Controller('incidents')
@@ -28,7 +28,8 @@ export class IncidentsController {
 
       return {
         success: true,
-        data: result,
+        message: 'Incidente reportado correctamente',
+        data: result, // Esto coincide con IncidentResponse en Android
       };
     } catch (error) {
       throw new HttpException(
@@ -43,18 +44,25 @@ export class IncidentsController {
 
   @Get('nearby')
   async getNearbyIncidents(
-    @Body() body: { latitude: number; longitude: number; radiusMeters?: number }
+    // Usamos @Query porque en Android es un GET con parámetros en URL
+    @Query('latitude') latitude: string,
+    @Query('longitude') longitude: string,
+    @Query('radiusMeters') radiusMeters?: string
   ) {
     try {
-      const incidents = await this.incidentsService.getNearbyIncidents(
-        body.latitude,
-        body.longitude,
-        body.radiusMeters || 5000
-      );
+      // Convertir strings a números
+      const lat = parseFloat(latitude);
+      const lng = parseFloat(longitude);
+      const rad = radiusMeters ? parseFloat(radiusMeters) : 5000;
+
+      const incidents = await this.incidentsService.getNearbyIncidents(lat, lng, rad);
 
       return {
         success: true,
-        data: incidents,
+        message: `${incidents.length} incidentes encontrados`,
+        // Importante: Android busca "incidents" o "data"
+        incidents: incidents,
+        data: incidents
       };
     } catch (error) {
       throw new HttpException(
@@ -65,14 +73,5 @@ export class IncidentsController {
         HttpStatus.BAD_REQUEST
       );
     }
-  }
-
-  @Get('health')
-  health() {
-    return {
-      status: 'ok',
-      service: 'incidents',
-      timestamp: new Date().toISOString(),
-    };
   }
 }

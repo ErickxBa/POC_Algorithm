@@ -18,6 +18,10 @@ export class GraphService {
     }
   }
 
+  async initializeGraphAroundLocation(lat: number, lon: number) {
+    return this.graphDatabaseService.initializeGraphAroundLocation(lat, lon);
+  }
+
   getGraphStatus() {
     return {
       status: 'loaded',

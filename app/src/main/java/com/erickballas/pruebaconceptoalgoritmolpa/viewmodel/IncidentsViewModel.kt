@@ -2,10 +2,12 @@ package com.erickballas.pruebaconceptoalgoritmolpa.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.erickballas.pruebaconceptoalgoritmolpa.repository.GraphRepository
+import com.erickballas.pruebaconceptoalgoritmolpa.service.IncidentData
+import com.erickballas.pruebaconceptoalgoritmolpa.service.RetrofitClient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import java.util.UUID
 
 data class IncidentsState(
     val isLoading: Boolean = false,
@@ -14,19 +16,9 @@ data class IncidentsState(
     val error: String? = null
 )
 
-data class IncidentData(
-    val reportId: String,
-    val streetId: Int,
-    val incidentType: String,
-    val severity: Int,
-    val latitude: Double,
-    val longitude: Double,
-    val description: String,
-    val reportedAt: String
-)
-
 class IncidentsViewModel : ViewModel() {
 
+    private val repository = GraphRepository(RetrofitClient.apiService)
     private val _incidentsState = MutableStateFlow(IncidentsState())
     val incidentsState: StateFlow<IncidentsState> = _incidentsState
 
@@ -41,48 +33,13 @@ class IncidentsViewModel : ViewModel() {
         viewModelScope.launch {
             _incidentsState.value = _incidentsState.value.copy(isLoading = true, error = null)
             try {
-                // Generar ID único para el reporte
-                val reportId = UUID.randomUUID().toString()
-
-                // Simular envío al backend (más adelante se integrará con ApiService)
-                val incident = IncidentData(
-                    reportId = reportId,
-                    streetId = streetId,
-                    incidentType = incidentType,
-                    severity = severity,
-                    latitude = latitude,
-                    longitude = longitude,
-                    description = description,
-                    reportedAt = System.currentTimeMillis().toString()
-                )
-
+                val response = repository.reportIncident(streetId, incidentType, severity, latitude, longitude, description)
                 _incidentsState.value = _incidentsState.value.copy(
-                    lastReportId = reportId,
+                    lastReportId = response.reportId.toString(),
                     isLoading = false
                 )
-
-                // Recargar incidentes cercanos
-                loadNearbyIncidents(latitude, longitude)
             } catch (e: Exception) {
-                _incidentsState.value = _incidentsState.value.copy(
-                    error = e.message ?: "Error al reportar incidente",
-                    isLoading = false
-                )
-            }
-        }
-    }
-
-    fun loadNearbyIncidents(latitude: Double, longitude: Double) {
-        viewModelScope.launch {
-            try {
-                // Simular datos de incidentes cercanos
-                val mockIncidents = emptyList<IncidentData>()
-
-                _incidentsState.value = _incidentsState.value.copy(incidents = mockIncidents)
-            } catch (e: Exception) {
-                _incidentsState.value = _incidentsState.value.copy(
-                    error = e.message ?: "Error al cargar incidentes cercanos"
-                )
+                _incidentsState.value = _incidentsState.value.copy(error = e.message, isLoading = false)
             }
         }
     }

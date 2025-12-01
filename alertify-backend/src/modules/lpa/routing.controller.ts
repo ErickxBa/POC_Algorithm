@@ -35,7 +35,8 @@ export class RoutingController {
           beta = 0.5;
       }
 
-      const result = this.lpaService.calculateRoute(
+      // CORRECCIÓN: Agregamos 'await' aquí
+      const result = await this.lpaService.calculateRoute(
         startNodeId,
         goalNodeId,
         alpha,
@@ -45,6 +46,7 @@ export class RoutingController {
       return {
         success: true,
         data: result,
+        message: 'Ruta calculada exitosamente'
       };
     } catch (error) {
       throw new HttpException(

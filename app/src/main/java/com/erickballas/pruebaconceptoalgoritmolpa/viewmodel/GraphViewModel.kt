@@ -2,37 +2,37 @@ package com.erickballas.pruebaconceptoalgoritmolpa.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.erickballas.pruebaconceptoalgoritmolpa.repository.GraphRepository
+import com.erickballas.pruebaconceptoalgoritmolpa.service.GraphEdge
+import com.erickballas.pruebaconceptoalgoritmolpa.service.GraphNode
+import com.erickballas.pruebaconceptoalgoritmolpa.service.RetrofitClient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 class GraphViewModel : ViewModel() {
+    private val repository = GraphRepository(RetrofitClient.apiService)
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    private val _nodeCount = MutableStateFlow(7)
-    val nodeCount: StateFlow<Int> = _nodeCount
+    private val _nodes = MutableStateFlow<List<GraphNode>>(emptyList())
+    val nodes: StateFlow<List<GraphNode>> = _nodes
 
-    private val _edgeCount = MutableStateFlow(8)
-    val edgeCount: StateFlow<Int> = _edgeCount
+    private val _edges = MutableStateFlow<List<GraphEdge>>(emptyList())
+    val edges: StateFlow<List<GraphEdge>> = _edges
 
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error
-
-    init {
-        refreshGraphData()
-    }
-
-    fun refreshGraphData() {
+    fun loadGraphData() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                _nodeCount.value = 7
-                _edgeCount.value = 8
-                _error.value = null
-                _isLoading.value = false
+                val response = repository.loadCityGraph()
+                if (response.success) {
+                    _nodes.value = response.nodes ?: emptyList()
+                    _edges.value = response.edges ?: emptyList()
+                }
             } catch (e: Exception) {
-                _error.value = e.message
+                // Manejar error
+            } finally {
                 _isLoading.value = false
             }
         }

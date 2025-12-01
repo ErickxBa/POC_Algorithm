@@ -2,10 +2,13 @@ package com.erickballas.pruebaconceptoalgoritmolpa.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.erickballas.pruebaconceptoalgoritmolpa.model.SafetyProfile
+import com.erickballas.pruebaconceptoalgoritmolpa.repository.GraphRepository
+import com.erickballas.pruebaconceptoalgoritmolpa.service.RetrofitClient
+import com.erickballas.pruebaconceptoalgoritmolpa.service.RouteData // Importamos la clase del servicio
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import java.util.UUID
 
 data class RouteState(
     val isLoading: Boolean = false,
@@ -14,17 +17,9 @@ data class RouteState(
     val safetyProfile: String = "balanced"
 )
 
-data class RouteData(
-    val routeId: String,
-    val path: List<Int>,
-    val totalDistance: Int,
-    val totalCost: Double,
-    val expandedNodes: Int,
-    val calculationTime: Int,
-    val description: String
-)
-
 class RouteViewModel : ViewModel() {
+
+    private val repository = GraphRepository(RetrofitClient.apiService)
 
     private val _routeState = MutableStateFlow(RouteState())
     val routeState: StateFlow<RouteState> = _routeState
@@ -32,26 +27,27 @@ class RouteViewModel : ViewModel() {
     fun calculateRoute(
         startNodeId: Int,
         goalNodeId: Int,
-        safetyProfile: String = "balanced"
+        safetyProfileStr: String = "balanced"
     ) {
         viewModelScope.launch {
             _routeState.value = _routeState.value.copy(isLoading = true, error = null)
             try {
-                // Simular cálculo de ruta
-                val mockRoute = RouteData(
-                    routeId = UUID.randomUUID().toString(),
-                    path = listOf(startNodeId, 200, 300, goalNodeId),
-                    totalDistance = 8500,
-                    totalCost = 42.5,
-                    expandedNodes = 6,
-                    calculationTime = 45,
-                    description = "Ruta segura desde nodo $startNodeId a $goalNodeId"
+                val profile = when(safetyProfileStr) {
+                    "fastest" -> SafetyProfile.FASTEST
+                    "safest" -> SafetyProfile.SAFEST
+                    else -> SafetyProfile.BALANCED
+                }
+
+                val result = repository.calculateRoute(
+                    startNodeId.toLong(),
+                    goalNodeId.toLong(),
+                    profile
                 )
 
                 _routeState.value = _routeState.value.copy(
-                    route = mockRoute,
+                    route = result,
                     isLoading = false,
-                    safetyProfile = safetyProfile
+                    safetyProfile = safetyProfileStr
                 )
             } catch (e: Exception) {
                 _routeState.value = _routeState.value.copy(

@@ -17,36 +17,34 @@ interface Edge {
 @Injectable()
 export class LPAService {
   private readonly logger = new Logger(LPAService.name);
-  private graphData: GraphData;
 
   constructor(private graphDatabaseService: GraphDatabaseService) {}
 
-  async initialize() {
-    this.graphData = await this.graphDatabaseService.loadGraph();
-  }
-
-  calculateRoute(startNodeId: number, goalNodeId: number, alpha: number = 0.5, beta: number = 0.5) {
+  async calculateRoute(startNodeId: number, goalNodeId: number, alpha: number = 0.5, beta: number = 0.5) {
     const startTime = Date.now();
 
     try {
-      if (!this.graphData) {
-        throw new Error('Graph not initialized');
+      // 1. Cargar datos frescos
+      const graphData = await this.graphDatabaseService.loadGraph();
+
+      if (!graphData || !graphData.nodes || graphData.nodes.length === 0) {
+        throw new Error('El grafo no está inicializado. Por favor usa "Crear Red" en la app primero.');
       }
 
       // Buscar nodos
-      const startNode = this.graphData.nodes.find(n => n.nodeId === startNodeId);
-      const goalNode = this.graphData.nodes.find(n => n.nodeId === goalNodeId);
+      const startNode = graphData.nodes.find(n => n.nodeId === startNodeId);
+      const goalNode = graphData.nodes.find(n => n.nodeId === goalNodeId);
 
       if (!startNode || !goalNode) {
-        throw new Error('Start or goal node not found');
+        throw new Error(`Nodo inicio (${startNodeId}) o destino (${goalNodeId}) no encontrados.`);
       }
 
-      // Algoritmo simple de Dijkstra para esta implementación inicial
+      // Algoritmo Dijkstra
       const distances = new Map<number, number>();
       const previous = new Map<number, number>();
       const unvisited = new Set<number>();
 
-      this.graphData.nodes.forEach(node => {
+      graphData.nodes.forEach(node => {
         distances.set(node.nodeId, node.nodeId === startNodeId ? 0 : Infinity);
         unvisited.add(node.nodeId);
       });
@@ -67,7 +65,7 @@ export class LPAService {
 
         unvisited.delete(current);
 
-        const edges = this.graphData.edges.filter(e => e.fromNodeId === current);
+        const edges = graphData.edges.filter(e => e.fromNodeId === current);
         for (const edge of edges) {
           const cost = (alpha * (edge.distanceMeters / 1000)) + (beta * (edge.currentRiskScore / 10));
           const newDist = (distances.get(current) || 0) + cost;
@@ -83,13 +81,17 @@ export class LPAService {
       const path: number[] = [];
       let current: number | undefined = goalNodeId;
 
+      if (distances.get(goalNodeId) === Infinity) {
+         throw new Error("No existe una ruta posible entre estos nodos");
+      }
+
       while (current !== undefined) {
         path.unshift(current);
         current = previous.get(current);
       }
 
       if (path[0] !== startNodeId) {
-        throw new Error('No route found');
+        throw new Error('No se pudo encontrar una ruta válida');
       }
 
       const totalCost = distances.get(goalNodeId) || 0;
@@ -100,14 +102,15 @@ export class LPAService {
         path,
         totalDistance: path.reduce((sum, nodeId, idx) => {
           if (idx === 0) return 0;
-          const edge = this.graphData.edges.find(e => e.fromNodeId === path[idx - 1] && e.toNodeId === nodeId);
+          const edge = graphData.edges.find(e => e.fromNodeId === path[idx - 1] && e.toNodeId === nodeId);
           return sum + (edge?.distanceMeters || 0);
         }, 0),
         totalCost,
-        expandedNodes: this.graphData.nodes.length,
+        expandedNodes: graphData.nodes.length,
         calculationTime,
-        description: `Route from ${startNodeId} to ${goalNodeId}`,
+        description: `Ruta calculada desde ${startNodeId} a ${goalNodeId}`
       };
+
     } catch (error) {
       this.logger.error('Error calculating route', error);
       throw error;

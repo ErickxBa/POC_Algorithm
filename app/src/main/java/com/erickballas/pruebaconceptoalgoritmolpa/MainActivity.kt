@@ -5,9 +5,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.erickballas.pruebaconceptoalgoritmolpa.view.GraphScreen
 import com.erickballas.pruebaconceptoalgoritmolpa.view.HomeScreen
 import com.erickballas.pruebaconceptoalgoritmolpa.view.MapScreen
@@ -17,41 +19,51 @@ import com.erickballas.pruebaconceptoalgoritmolpa.viewmodel.GraphViewModel
 import com.erickballas.pruebaconceptoalgoritmolpa.viewmodel.IncidentsViewModel
 import com.erickballas.pruebaconceptoalgoritmolpa.viewmodel.MapViewModel
 import com.erickballas.pruebaconceptoalgoritmolpa.viewmodel.RouteViewModel
-import androidx.navigation.NavType
-import androidx.navigation.navArgument
 
+// ⚠️ ESTA ES LA CLASE QUE NO PUEDE FALTAR ⚠️
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            // Aquí llamamos a la navegación
+            AppNavigation()
+        }
+    }
+}
+
+// Esta es la función de navegación (va fuera de la clase)
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = "home") {
 
-        // 1. Home
+        // 1. HOME
         composable("home") {
             HomeScreen(
                 onNavigateToMap = { navController.navigate("map") },
                 onNavigateToRoute = { navController.navigate("route_planning") },
-                onNavigateToIncident = {
-                    // Si navega desde el home, usa coordenadas por defecto (o 0.0)
-                    navController.navigate("report_incident/0.0/0.0")
-                },
+                onNavigateToIncident = { navController.navigate("report_incident/0.0/0.0") },
                 onNavigateToGraph = { navController.navigate("graph_view") }
             )
         }
 
-        // 2. Mapa (Ahora puede enviar coordenadas)
+        // 2. MAPA
         composable("map") {
             val viewModel: MapViewModel = viewModel()
             MapScreen(
                 viewModel = viewModel,
-                onNavigateToReport = { lat, lng ->
-                    // NAVEGAMOS PASANDO LAS COORDENADAS REALES
+                // Ahora recibimos 3 parámetros: lat, lng, streetId
+                onNavigateToReport = { lat, lng, streetId ->
+                    // Por ahora no pasamos el streetId en la URL para simplificar,
+                    // o puedes añadirlo a la ruta si quieres.
+                    // El viewModel de Reporte puede calcularlo o lo ignoramos.
                     navController.navigate("report_incident/$lat/$lng")
                 }
             )
         }
 
-        // 3. Ruta
+        // 3. RUTAS
         composable("route_planning") {
             val viewModel: RouteViewModel = viewModel()
             RoutePlanningScreen(
@@ -60,7 +72,7 @@ fun AppNavigation() {
             )
         }
 
-        // 4. Reportar Incidente (RECIBE COORDENADAS)
+        // 4. REPORTAR INCIDENTE
         composable(
             route = "report_incident/{lat}/{lng}",
             arguments = listOf(
@@ -81,7 +93,7 @@ fun AppNavigation() {
             )
         }
 
-        // 5. Gráfo
+        // 5. GRAFO
         composable("graph_view") {
             val viewModel: GraphViewModel = viewModel()
             GraphScreen(
