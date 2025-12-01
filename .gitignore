@@ -1,6 +1,6 @@
-# Android Studio
+# Android Studio & Gradle
 *.iml
-.gradle
+.gradle/
 .idea/
 *.apk
 *.aar
@@ -8,7 +8,6 @@
 *.dex
 *.class
 *.jar
-*.aar
 *.war
 *.ear
 *.zip
@@ -16,10 +15,13 @@
 *.rar
 .DS_Store
 local.properties
-/build
+/build/
+app/build/
+alertify-backend/build/
 /captures
 .externalNativeBuild
 .cxx
+gradle/wrapper/gradle-wrapper.jar
 
 # Backend NestJS
 alertify-backend/node_modules/
