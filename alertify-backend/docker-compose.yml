@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  alertify-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: alertify-backend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PERSIST_DATA=true
+    volumes:
+      - ./data:/app/data
+      - ./src:/app/src
+    command: npm run start:dev
+    networks:
+      - alertify-network
+
+networks:
+  alertify-network:
+    driver: bridge

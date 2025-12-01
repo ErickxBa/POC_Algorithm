@@ -1,0 +1,63 @@
+# Android Studio
+*.iml
+.gradle
+.idea/
+*.apk
+*.aar
+*.ap_
+*.dex
+*.class
+*.jar
+*.aar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+.DS_Store
+local.properties
+/build
+/captures
+.externalNativeBuild
+.cxx
+
+# Backend NestJS
+alertify-backend/node_modules/
+alertify-backend/dist/
+alertify-backend/.env
+alertify-backend/npm-debug.log
+alertify-backend/yarn-error.log
+alertify-backend/data/graph-data.json
+
+# IDEs
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+.springBeans
+.sts4-cache
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Logs
+*.log
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Dependencies
+node_modules/
+yarn.lock
+package-lock.json
+
+# Optional npm cache directory
+.npm
+
+# Temporary files
+tmp/
+temp/
+*.tmp
