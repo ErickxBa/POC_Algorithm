@@ -1,8 +1,8 @@
 package com.erickballas.pruebaconceptoalgoritmolpa.view
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,6 +14,7 @@ import com.erickballas.pruebaconceptoalgoritmolpa.viewmodel.IncidentsViewModel
 /**
  * Pantalla para reportar incidentes
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportIncidentScreen(
     viewModel: IncidentsViewModel,
@@ -34,8 +35,12 @@ fun ReportIncidentScreen(
             TopAppBar(
                 title = { Text("Reportar Incidente") },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Atrás")
+                    Button(
+                        onClick = onBackClick,
+                        modifier = Modifier.size(48.dp),
+                        colors = ButtonDefaults.textButtonColors()
+                    ) {
+                        Text("← Atrás")
                     }
                 }
             )

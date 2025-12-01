@@ -2,12 +2,10 @@ package com.erickballas.pruebaconceptoalgoritmolpa.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.erickballas.pruebaconceptoalgoritmolpa.repository.GraphRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
+import java.util.UUID
 
 data class RouteState(
     val isLoading: Boolean = false,
@@ -26,10 +24,7 @@ data class RouteData(
     val description: String
 )
 
-@HiltViewModel
-class RouteViewModel @Inject constructor(
-    private val repository: GraphRepository
-) : ViewModel() {
+class RouteViewModel : ViewModel() {
 
     private val _routeState = MutableStateFlow(RouteState())
     val routeState: StateFlow<RouteState> = _routeState
@@ -42,17 +37,25 @@ class RouteViewModel @Inject constructor(
         viewModelScope.launch {
             _routeState.value = _routeState.value.copy(isLoading = true, error = null)
             try {
-                repository.calculateRoute(startNodeId, goalNodeId, safetyProfile)
-                    .collect { route ->
-                        _routeState.value = _routeState.value.copy(
-                            route = route,
-                            isLoading = false,
-                            safetyProfile = safetyProfile
-                        )
-                    }
+                // Simular cálculo de ruta
+                val mockRoute = RouteData(
+                    routeId = UUID.randomUUID().toString(),
+                    path = listOf(startNodeId, 200, 300, goalNodeId),
+                    totalDistance = 8500,
+                    totalCost = 42.5,
+                    expandedNodes = 6,
+                    calculationTime = 45,
+                    description = "Ruta segura desde nodo $startNodeId a $goalNodeId"
+                )
+
+                _routeState.value = _routeState.value.copy(
+                    route = mockRoute,
+                    isLoading = false,
+                    safetyProfile = safetyProfile
+                )
             } catch (e: Exception) {
                 _routeState.value = _routeState.value.copy(
-                    error = e.message,
+                    error = e.message ?: "Error al calcular ruta",
                     isLoading = false
                 )
             }

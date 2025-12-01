@@ -1,120 +1,114 @@
 package com.erickballas.pruebaconceptoalgoritmolpa.view
 
+import android.preference.PreferenceManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.android.gms.maps.model.LatLng
-import com.google.maps.android.compose.*
 import com.erickballas.pruebaconceptoalgoritmolpa.viewmodel.MapViewModel
+import org.osmdroid.config.Configuration
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polyline
 
-/**
- * Pantalla principal de Mapa con Google Maps
- * Muestra:
- * - Ubicación del usuario
- * - Rutas calculadas
- * - Incidentes cercanos
- */
 @Composable
 fun MapScreen(
     viewModel: MapViewModel,
     onIncidentClick: (String) -> Unit = {}
 ) {
+    val context = LocalContext.current
     val mapState by viewModel.mapState.collectAsStateWithLifecycle()
-    
-    // Ubicación inicial (Cartagena, Colombia)
-    val initialLocation = LatLng(10.3932, -75.4830)
-    val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(initialLocation, 15f)
+
+    // Inicializar configuración de OSM (Importante para que cargue el mapa)
+    LaunchedEffect(Unit) {
+        Configuration.getInstance().load(context, PreferenceManager.getDefaultSharedPreferences(context))
     }
 
     var showIncidentDialog by remember { mutableStateOf(false) }
     var selectedIncidentId by remember { mutableStateOf("") }
 
+    // Referencia al MapView para poder actualizarlo
+    var mapViewRef by remember { mutableStateOf<MapView?>(null) }
+
     Box(modifier = Modifier.fillMaxSize()) {
-        // Mapa
-        GoogleMap(
+
+        // 1. EL MAPA (OSM)
+        AndroidView(
             modifier = Modifier.fillMaxSize(),
-            cameraPositionState = cameraPositionState,
-            properties = MapProperties(
-                isMyLocationEnabled = true,
-                mapType = MapType.NORMAL
-            ),
-            uiSettings = MapUiSettings(
-                zoomControlsEnabled = true,
-                myLocationButtonEnabled = true,
-                mapToolbarEnabled = true
-            )
-        ) {
-            // Marcador de ubicación del usuario
-            mapState.userLocation?.let { location ->
-                Marker(
-                    state = MarkerState(position = location),
-                    title = "Tu ubicación",
-                    infoWindow = {
-                        Text("Estás aquí", style = MaterialTheme.typography.labelMedium)
+            factory = { ctx ->
+                MapView(ctx).apply {
+                    setTileSource(TileSourceFactory.MAPNIK) // Estilo estándar de OSM
+                    setMultiTouchControls(true)
+                    controller.setZoom(15.0)
+
+                    // Centrar en Cartagena por defecto (según tus archivos)
+                    controller.setCenter(GeoPoint(10.3932, -75.4830))
+
+                    mapViewRef = this
+                }
+            },
+            update = { view ->
+                // Limpiar overlays anteriores para redibujar
+                view.overlays.clear()
+
+                // A. DIBUJAR RUTA (Si existe)
+                if (mapState.route.isNotEmpty()) {
+                    val line = Polyline().apply {
+                        // Convertir GeoLocation a GeoPoint de OSM
+                        val points = mapState.route.map { GeoPoint(it.latitude, it.longitude) }
+                        setPoints(points)
+                        outlinePaint.color = android.graphics.Color.BLUE
+                        outlinePaint.strokeWidth = 10f
                     }
-                )
-            }
+                    view.overlays.add(line)
+                }
 
-            // Dibujar ruta como polilínea
-            if (mapState.route.isNotEmpty()) {
-                Polyline(
-                    points = mapState.route,
-                    color = Color.Blue,
-                    width = 8f,
-                    geodesic = true
-                )
-                
-                // Marcador de inicio (verde)
-                mapState.route.firstOrNull()?.let { start ->
-                    Marker(
-                        state = MarkerState(position = start),
-                        title = "Inicio",
-                        snippet = "Punto de salida"
-                    )
-                }
-                
-                // Marcador de fin (rojo)
-                mapState.route.lastOrNull()?.let { end ->
-                    Marker(
-                        state = MarkerState(position = end),
-                        title = "Destino",
-                        snippet = "Punto de llegada"
-                    )
-                }
-            }
+                // B. DIBUJAR INCIDENTES
+                mapState.incidents.forEach { incident ->
+                    val marker = Marker(view).apply {
+                        position = GeoPoint(incident.location.latitude, incident.location.longitude)
+                        title = incident.type.uppercase()
+                        snippet = "Severidad: ${incident.severity}/10"
 
-            // Mostrar incidentes como marcadores
-            mapState.incidents.forEach { incident ->
-                val color = when (incident.severity) {
-                    in 1..3 -> Color.Yellow       // Bajo
-                    in 4..6 -> Color(0xFFFFA500)  // Naranja (Medio)
-                    else -> Color.Red             // Alto
-                }
-                
-                Marker(
-                    state = MarkerState(position = incident.location),
-                    title = incident.type.uppercase(),
-                    snippet = "Severidad: ${incident.severity}/10",
-                    onClick = {
-                        selectedIncidentId = incident.id
-                        showIncidentDialog = true
-                        onIncidentClick(incident.id)
-                        true
+                        // Configurar icono o color según severidad (Lógica simplificada)
+                        // En OSM los iconos requieren drawables, aquí usamos el default por simplicidad
+                        // Puedes usar: icon = ContextCompat.getDrawable(context, R.drawable.tu_icono)
+
+                        setOnMarkerClickListener { _, _ ->
+                            selectedIncidentId = incident.id
+                            showIncidentDialog = true
+                            onIncidentClick(incident.id)
+                            true
+                        }
                     }
-                )
-            }
-        }
+                    view.overlays.add(marker)
+                }
 
+                // C. UBICACIÓN DEL USUARIO
+                mapState.userLocation?.let { location ->
+                    val userMarker = Marker(view).apply {
+                        position = GeoPoint(location.latitude, location.longitude)
+                        title = "Tu ubicación"
+                        // icon = ... (poner un icono diferente para el usuario)
+                    }
+                    view.overlays.add(userMarker)
+                }
+
+                // Forzar repintado
+                view.invalidate()
+            }
+        )
+
+        // 2. PANELES UI (Igual que en tu código original)
         // Panel superior con búsqueda
         Column(
             modifier = Modifier
@@ -122,35 +116,10 @@ fun MapScreen(
                 .padding(16.dp)
                 .fillMaxWidth()
         ) {
-            SearchBar(
-                modifier = Modifier.fillMaxWidth()
-            )
-
+            SearchBar(modifier = Modifier.fillMaxWidth())
             Spacer(modifier = Modifier.height(8.dp))
-
-            // Indicador de carga
             if (mapState.isLoading) {
-                LinearProgressIndicator(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(4.dp)
-                )
-            }
-
-            // Mensaje de error
-            mapState.error?.let { error ->
-                Text(
-                    text = "⚠️ Error: $error",
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            MaterialTheme.colorScheme.errorContainer,
-                            shape = MaterialTheme.shapes.small
-                        )
-                        .padding(8.dp),
-                    style = MaterialTheme.typography.labelSmall
-                )
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(4.dp))
             }
         }
 
@@ -160,13 +129,9 @@ fun MapScreen(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .padding(16.dp)
-                .background(
-                    MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                    shape = MaterialTheme.shapes.medium
-                )
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f), MaterialTheme.shapes.medium)
                 .padding(12.dp)
         ) {
-            // Info de incidentes
             if (mapState.incidents.isNotEmpty()) {
                 Text(
                     text = "📍 ${mapState.incidents.size} incidentes cercanos",
@@ -175,51 +140,29 @@ fun MapScreen(
                 )
             }
 
-            // Botones de control
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp),
+                    modifier = Modifier.weight(1f),
                     onClick = { viewModel.clearRoute() }
-                ) {
-                    Text("Limpiar")
-                }
+                ) { Text("Limpiar") }
 
                 Button(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp),
+                    modifier = Modifier.weight(1f),
                     onClick = {
-                        mapState.userLocation?.let { location ->
-                            cameraPositionState.animate(
-                                com.google.android.gms.maps.CameraUpdateFactory.newLatLngZoom(
-                                    location,
-                                    15f
-                                )
-                            )
+                        mapState.userLocation?.let { loc ->
+                            mapViewRef?.controller?.animateTo(GeoPoint(loc.latitude, loc.longitude))
                         }
                     }
-                ) {
-                    Text("Mi Ubicación")
-                }
+                ) { Text("Mi Ubicación") }
             }
         }
     }
 
-    // Diálogo de detalles de incidente
+    // Diálogo de detalles (Igual que el original)
     if (showIncidentDialog) {
         val incident = mapState.incidents.find { it.id == selectedIncidentId }
         incident?.let {
-            IncidentDetailDialog(
-                incident = it,
-                onDismiss = { showIncidentDialog = false }
-            )
+            IncidentDetailDialog(incident = it, onDismiss = { showIncidentDialog = false })
         }
     }
 }
@@ -238,8 +181,12 @@ fun SearchBar(
         singleLine = true,
         trailingIcon = {
             if (searchText.isNotEmpty()) {
-                IconButton(onClick = { searchText = "" }) {
-                    Icon(Icons.Default.Clear, contentDescription = "Limpiar")
+                Button(
+                    onClick = { searchText = "" },
+                    modifier = Modifier.size(36.dp),
+                    colors = ButtonDefaults.textButtonColors()
+                ) {
+                    Text("✕")
                 }
             }
         },

@@ -1,6 +1,6 @@
 package com.erickballas.pruebaconceptoalgoritmolpa.service
 
-import com.erickballs.pruebaconceptoalgoritmolpa.model.Location
+import com.erickballas.pruebaconceptoalgoritmolpa.model.Location
 import com.erickballas.pruebaconceptoalgoritmolpa.model.Route
 import com.erickballas.pruebaconceptoalgoritmolpa.model.SafetyProfile
 import retrofit2.http.GET

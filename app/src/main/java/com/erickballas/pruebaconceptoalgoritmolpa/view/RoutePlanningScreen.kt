@@ -1,10 +1,6 @@
 package com.erickballas.pruebaconceptoalgoritmolpa.view
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -12,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.erickballas.pruebaconceptoalgoritmolpa.viewmodel.RouteViewModel
+import androidx.compose.material3.ExperimentalMaterial3Api
 
 /**
  * Pantalla para calcular rutas
@@ -20,6 +17,7 @@ import com.erickballas.pruebaconceptoalgoritmolpa.viewmodel.RouteViewModel
  * - Nodo destino
  * - Perfil de seguridad (fastest, balanced, safest)
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RoutePlanningScreen(
     viewModel: RouteViewModel,
@@ -37,8 +35,12 @@ fun RoutePlanningScreen(
             TopAppBar(
                 title = { Text("Calcular Ruta") },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Atrás")
+                    Button(
+                        onClick = onBackClick,
+                        modifier = Modifier.size(48.dp),
+                        colors = ButtonDefaults.textButtonColors()
+                    ) {
+                        Text("← Atrás")
                     }
                 }
             )
