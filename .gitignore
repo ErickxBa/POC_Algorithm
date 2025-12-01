@@ -23,6 +23,14 @@ alertify-backend/build/
 .cxx
 gradle/wrapper/gradle-wrapper.jar
 
+# EXCEPCIONES - Archivos necesarios para compilar (NO ignorar)
+!gradlew
+!gradlew.bat
+!gradle/wrapper/gradle-wrapper.properties
+!build.gradle.kts
+!settings.gradle.kts
+!gradle.properties
+
 # Backend NestJS
 alertify-backend/node_modules/
 alertify-backend/dist/
