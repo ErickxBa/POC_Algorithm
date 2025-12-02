@@ -11,7 +11,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.erickballas.pruebaconceptoalgoritmolpa.view.GraphScreen
-import com.erickballas.pruebaconceptoalgoritmolpa.view.HomeScreen
 import com.erickballas.pruebaconceptoalgoritmolpa.view.MapScreen
 import com.erickballas.pruebaconceptoalgoritmolpa.view.ReportIncidentScreen
 import com.erickballas.pruebaconceptoalgoritmolpa.view.RoutePlanningScreen
@@ -20,59 +19,64 @@ import com.erickballas.pruebaconceptoalgoritmolpa.viewmodel.IncidentsViewModel
 import com.erickballas.pruebaconceptoalgoritmolpa.viewmodel.MapViewModel
 import com.erickballas.pruebaconceptoalgoritmolpa.viewmodel.RouteViewModel
 
-// ⚠️ ESTA ES LA CLASE QUE NO PUEDE FALTAR ⚠️
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            // Aquí llamamos a la navegación
             AppNavigation()
         }
     }
 }
 
-// Esta es la función de navegación (va fuera de la clase)
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
 
-    NavHost(navController = navController, startDestination = "home") {
+    // CAMBIO 1: El destino inicial ahora es "map", saltándonos el menú antiguo
+    NavHost(navController = navController, startDestination = "map") {
 
-        // 1. HOME
-        composable("home") {
-            HomeScreen(
-                onNavigateToMap = { navController.navigate("map") },
-                onNavigateToRoute = { navController.navigate("route_planning") },
-                onNavigateToIncident = { navController.navigate("report_incident/0.0/0.0") },
-                onNavigateToGraph = { navController.navigate("graph_view") }
-            )
-        }
-
-        // 2. MAPA
+        // 1. MAPA (Pantalla Principal estilo Figma "home/inicio")
         composable("map") {
             val viewModel: MapViewModel = viewModel()
             MapScreen(
                 viewModel = viewModel,
-                // Ahora recibimos 3 parámetros: lat, lng, streetId
+                // Al tocar la barra de búsqueda, vamos a planificar ruta ("inicioRuta")
+                onSearchClick = {
+                    navController.navigate("route_planning")
+                },
+                // Al reportar, vamos a la pantalla de reporte
                 onNavigateToReport = { lat, lng, streetId ->
-                    // Por ahora no pasamos el streetId en la URL para simplificar,
-                    // o puedes añadirlo a la ruta si quieres.
-                    // El viewModel de Reporte puede calcularlo o lo ignoramos.
                     navController.navigate("report_incident/$lat/$lng")
                 }
             )
         }
 
-        // 3. RUTAS
-        composable("route_planning") {
+        // 2. PLANIFICAR RUTA (Pantalla "inicioRuta" del Figma)
+        // CAMBIO: Definir ruta con parámetros opcionales para la ubicación actual
+        composable(
+            route = "route_planning?lat={lat}&lng={lng}",
+            arguments = listOf(
+                navArgument("lat") { defaultValue = "0.0" },
+                navArgument("lng") { defaultValue = "0.0" }
+            )
+        ) { backStackEntry ->
+            val lat = backStackEntry.arguments?.getString("lat")?.toDoubleOrNull() ?: 0.0
+            val lng = backStackEntry.arguments?.getString("lng")?.toDoubleOrNull() ?: 0.0
+
             val viewModel: RouteViewModel = viewModel()
             RoutePlanningScreen(
                 viewModel = viewModel,
-                onBackClick = { navController.popBackStack() }
+                currentUserLat = lat,
+                currentUserLng = lng,
+                onBackClick = { navController.popBackStack() },
+                onRouteCalculated = {
+                    // Regresar al mapa (idealmente pasando la ruta, pero por ahora solo volvemos)
+                    navController.popBackStack()
+                }
             )
         }
 
-        // 4. REPORTAR INCIDENTE
+        // 3. REPORTAR INCIDENTE
         composable(
             route = "report_incident/{lat}/{lng}",
             arguments = listOf(
@@ -93,13 +97,7 @@ fun AppNavigation() {
             )
         }
 
-        // 5. GRAFO
-        composable("graph_view") {
-            val viewModel: GraphViewModel = viewModel()
-            GraphScreen(
-                viewModel = viewModel,
-                onBackClick = { navController.popBackStack() }
-            )
-        }
+        // La pantalla de grafo queda accesible solo si la necesitas por debug,
+        // pero ya no es parte del flujo principal.
     }
 }

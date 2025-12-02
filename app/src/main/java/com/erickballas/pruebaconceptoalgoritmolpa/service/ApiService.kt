@@ -37,12 +37,12 @@ interface ApiService {
     ): IncidentsListResponse
 }
 
-// ================== DTOs ==================
+// ================== DTOs CORREGIDOS ==================
 
 // Requests
 data class RouteRequest(
     val startNodeId: Long,
-    val endNodeId: Long,
+    val goalNodeId: Long, // <--- ¡CORREGIDO! Antes decía endNodeId
     val safetyProfile: SafetyProfile,
     val alpha: Double,
     val beta: Double
@@ -65,7 +65,7 @@ data class InitGraphRequest(
 // Responses
 data class RouteResponse(
     val success: Boolean,
-    val data: RouteData?, // Aquí usamos la clase RouteData que definimos abajo
+    val data: RouteData?,
     val message: String?
 )
 
@@ -92,10 +92,9 @@ data class IncidentsListResponse(
 
 // --- DATA MODELS ---
 
-// ESTA ES LA CLASE QUE FALTABA Y CAUSABA EL ERROR
 data class RouteData(
     val routeId: String,
-    val path: List<Long>, // El backend envía números (IDs de nodos)
+    val path: List<Long>,
     val totalDistance: Double,
     val totalCost: Double,
     val expandedNodes: Int,

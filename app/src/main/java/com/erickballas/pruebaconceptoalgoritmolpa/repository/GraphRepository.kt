@@ -16,7 +16,15 @@ class GraphRepository(private val apiService: ApiService) {
             SafetyProfile.SAFEST -> 0.2 to 0.8
         }
 
-        val request = RouteRequest(startNodeId, endNodeId, safetyProfile, alpha, beta)
+        // CORRECCIÓN AQUÍ: Asignamos endNodeId a goalNodeId
+        val request = RouteRequest(
+            startNodeId = startNodeId,
+            goalNodeId = endNodeId, // <--- ¡AQUÍ ESTÁ EL CAMBIO CLAVE!
+            safetyProfile = safetyProfile,
+            alpha = alpha,
+            beta = beta
+        )
+
         val response = apiService.calculateRoute(request)
         return response.data ?: throw Exception(response.message ?: "Error al calcular ruta")
     }

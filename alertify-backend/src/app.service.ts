@@ -17,13 +17,13 @@ export class AppService implements OnModuleInit {
     try {
       this.logger.log('Inicializando aplicación Alertify...');
       
-      // Cargar el grafo de la ciudad
-      await this.graphService.initializeGraph();
-      
-      this.logger.log('✓ Aplicación iniciada correctamente');
+      // ELIMINAMOS ESTA LÍNEA PORQUE AHORA EL GRAFO SE INICIALIZA DESDE EL CELULAR
+      // await this.graphService.initializeGraph();
+
+      this.logger.log('✓ Aplicación iniciada correctamente. Esperando ubicación del usuario...');
     } catch (error) {
       this.logger.error('Error durante la inicialización', error);
-      process.exit(1);
+      // No matamos el proceso, dejamos que arranque aunque sea vacío
     }
   }
 
@@ -36,7 +36,7 @@ export class AppService implements OnModuleInit {
       status: 'online',
       service: 'Alertify LPA* Routing Engine',
       version: '1.0.0',
-      graphLoaded: this.graphService.isGraphLoaded(),
+      // graphLoaded: this.graphService.isGraphLoaded(), // Opcional: Puedes descomentar si implementaste isGraphLoaded
       timestamp: new Date().toISOString()
     };
   }

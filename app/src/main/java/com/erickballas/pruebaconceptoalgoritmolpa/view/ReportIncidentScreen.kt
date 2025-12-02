@@ -1,10 +1,15 @@
 package com.erickballas.pruebaconceptoalgoritmolpa.view
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -22,15 +27,20 @@ fun ReportIncidentScreen(
     onIncidentReported: () -> Unit = {}
 ) {
     val incidentState by viewModel.incidentsState.collectAsStateWithLifecycle()
+    val suggestions by viewModel.searchSuggestions.collectAsStateWithLifecycle()
 
     var streetId by remember { mutableStateOf("") }
     var incidentType by remember { mutableStateOf("accident") }
     var severity by remember { mutableStateOf(5f) }
     var description by remember { mutableStateOf("") }
 
-    // Usamos los valores recibidos del GPS
+    // Ubicación (se puede editar manualmente o via búsqueda)
     var latitude by remember { mutableStateOf(if (initialLat != 0.0) initialLat.toString() else "") }
     var longitude by remember { mutableStateOf(if (initialLng != 0.0) initialLng.toString() else "") }
+
+    // Buscador
+    var searchQuery by remember { mutableStateOf("") }
+    var isSearching by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -51,10 +61,51 @@ fun ReportIncidentScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+
+            // --- SECCIÓN DE BÚSQUEDA ---
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = {
+                    searchQuery = it
+                    isSearching = true
+                    viewModel.searchLocation(it)
+                },
+                label = { Text("Buscar sitio o dirección...") },
+                modifier = Modifier.fillMaxWidth(),
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) }
+            )
+
+            // Lista de sugerencias (Solo visible si hay resultados y estamos buscando)
+            if (isSearching && suggestions.isNotEmpty()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 200.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                ) {
+                    LazyColumn {
+                        items(suggestions) { place ->
+                            ListItem(
+                                headlineContent = { Text(place.display_name, maxLines = 1) },
+                                leadingContent = { Icon(Icons.Default.Place, null) },
+                                modifier = Modifier.clickable {
+                                    // AL SELECCIONAR:
+                                    latitude = place.lat
+                                    longitude = place.lon
+                                    searchQuery = place.display_name.take(30) + "..." // Mostrar nombre corto
+                                    isSearching = false // Ocultar lista
+                                    viewModel.clearSuggestions()
+                                }
+                            )
+                            Divider()
+                        }
+                    }
+                }
+            }
+            // ---------------------------
+
             Text("Tipo de Incidente", style = MaterialTheme.typography.labelMedium)
 
             Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
-                listOf("accident" to "Accidente", "congestion" to "Tráfico", "road_work" to "Obras").forEach { (type, label) ->
+                listOf("accident" to "Accidente", "congestion" to "Tráfico", "road_work" to "Obras", "robbery" to "Robo").forEach { (type, label) ->
                     FilterChip(
                         selected = incidentType == type,
                         onClick = { incidentType = type },
@@ -64,12 +115,23 @@ fun ReportIncidentScreen(
                 }
             }
 
-            OutlinedTextField(
-                value = streetId,
-                onValueChange = { streetId = it },
-                label = { Text("ID Calle (Opcional)") },
-                modifier = Modifier.fillMaxWidth()
-            )
+            Text("Ubicación Seleccionada:")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = latitude,
+                    onValueChange = { latitude = it },
+                    label = { Text("Latitud") },
+                    modifier = Modifier.weight(1f),
+                    readOnly = true // Mejor solo lectura si usamos búsqueda/mapa
+                )
+                OutlinedTextField(
+                    value = longitude,
+                    onValueChange = { longitude = it },
+                    label = { Text("Longitud") },
+                    modifier = Modifier.weight(1f),
+                    readOnly = true
+                )
+            }
 
             Text("Severidad: ${severity.toInt()}/10")
             Slider(value = severity, onValueChange = { severity = it }, valueRange = 1f..10f, steps = 8)
@@ -77,19 +139,15 @@ fun ReportIncidentScreen(
             OutlinedTextField(
                 value = description,
                 onValueChange = { description = it },
-                label = { Text("Descripción") },
-                modifier = Modifier.fillMaxWidth()
+                label = { Text("Descripción (Opcional)") },
+                modifier = Modifier.fillMaxWidth().height(80.dp)
             )
 
-            Text("Ubicación Detectada:")
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = latitude, onValueChange = { latitude = it }, label = { Text("Lat") }, modifier = Modifier.weight(1f))
-                OutlinedTextField(value = longitude, onValueChange = { longitude = it }, label = { Text("Lng") }, modifier = Modifier.weight(1f))
-            }
+            Spacer(modifier = Modifier.weight(1f))
 
             Button(
                 onClick = {
-                    val sId = streetId.toIntOrNull() ?: 0
+                    val sId = streetId.toIntOrNull() ?: 0 // Opcional
                     val lat = latitude.toDoubleOrNull()
                     val lng = longitude.toDoubleOrNull()
                     if (lat != null && lng != null) {
@@ -98,9 +156,9 @@ fun ReportIncidentScreen(
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
-                enabled = !incidentState.isLoading
+                enabled = !incidentState.isLoading && latitude.isNotEmpty()
             ) {
-                Text(if (incidentState.isLoading) "Enviando..." else "Enviar Reporte")
+                Text(if (incidentState.isLoading) "Enviando..." else "Confirmar Reporte")
             }
         }
     }
