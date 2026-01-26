@@ -23,6 +23,18 @@ alertify-backend/build/
 .cxx
 gradle/wrapper/gradle-wrapper.jar
 
+# Gradle Cache (importante: caché local del proyecto)
+.gradle
+.gradle/**/*
+
+# Gradle Build Cache
+.build-cache/
+build-cache/
+
+# Gradle caches folder
+caches/
+caches/**/*
+
 # EXCEPCIONES - Archivos necesarios para compilar (NO ignorar)
 !gradlew
 !gradlew.bat

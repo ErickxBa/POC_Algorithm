@@ -20,6 +20,8 @@ import org.osmdroid.views.overlay.Polyline
 @Composable
 fun GraphScreen(
     viewModel: GraphViewModel,
+    initialLat: Double = 0.0, // <-- Nuevo Parámetro
+    initialLng: Double = 0.0, // <-- Nuevo Parámetro
     onBackClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -48,7 +50,15 @@ fun GraphScreen(
                         setTileSource(TileSourceFactory.MAPNIK)
                         setMultiTouchControls(true)
                         controller.setZoom(16.0)
-                        controller.setCenter(GeoPoint(10.3950, -75.4900))
+
+                        // --- CORRECCIÓN AQUÍ ---
+                        // Usamos los parámetros dinámicos o 0,0 si no se envían
+                        if (initialLat != 0.0 && initialLng != 0.0) {
+                            controller.setCenter(GeoPoint(initialLat, initialLng))
+                        } else {
+                            controller.setCenter(GeoPoint(0.0, 0.0))
+                        }
+                        // -----------------------
                     }
                 },
                 update = { view ->

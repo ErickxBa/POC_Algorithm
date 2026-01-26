@@ -29,7 +29,8 @@ fun RoutePlanningScreen(
     currentUserLat: Double = 0.0,
     currentUserLng: Double = 0.0,
     onBackClick: () -> Unit = {},
-    onRouteCalculated: () -> Unit = {}
+    // CAMBIO: Ahora aceptamos lat/lng del destino para pasarlos al mapa
+    onRouteCalculated: (Double, Double) -> Unit = { _, _ -> }
 ) {
     val routeState by viewModel.routeState.collectAsStateWithLifecycle()
     val suggestions by viewModel.suggestions.collectAsStateWithLifecycle()
@@ -40,12 +41,9 @@ fun RoutePlanningScreen(
     var safetyProfile by remember { mutableStateOf("balanced") }
     var isSearching by remember { mutableStateOf(false) }
 
-    // Color Azul Oscuro (Figma)
     val darkBlue = Color(0xFF1A237E)
 
     Column(modifier = Modifier.fillMaxSize().background(darkBlue)) {
-
-        // CORRECCIÓN: Componente actualizado de Material 3
         TopAppBar(
             title = { },
             navigationIcon = {
@@ -53,38 +51,35 @@ fun RoutePlanningScreen(
                     Icon(Icons.Default.ArrowBack, contentDescription = "Atrás", tint = Color.White)
                 }
             },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = Color.Transparent,
-                navigationIconContentColor = Color.White
-            )
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent, navigationIconContentColor = Color.White)
         )
 
         Column(modifier = Modifier.padding(horizontal = 24.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             Text("Ingresa la Ruta", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 24.dp))
 
-            // Input Origen
+            // Origen
             OutlinedTextField(
                 value = "Tu ubicación", onValueChange = {}, readOnly = true,
                 leadingIcon = { Icon(Icons.Default.MyLocation, null, tint = Color.Black) },
                 modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp),
-                colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color(0xFFE0E0E0), unfocusedContainerColor = Color(0xFFE0E0E0), focusedBorderColor = Color.Transparent, unfocusedBorderColor = Color.Transparent)
+                colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color(0xFFE0E0E0), unfocusedContainerColor = Color(0xFFE0E0E0))
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Input Destino
+            // Destino (Búsqueda)
             OutlinedTextField(
                 value = destinationQuery,
                 onValueChange = { destinationQuery = it; isSearching = true; viewModel.searchLocation(it) },
                 placeholder = { Text("¿A dónde quieres ir?") },
                 leadingIcon = { Icon(Icons.Default.Search, null, tint = Color.Gray) },
                 modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp),
-                colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color(0xFFE0E0E0), unfocusedContainerColor = Color(0xFFE0E0E0), focusedBorderColor = Color.Transparent, unfocusedBorderColor = Color.Transparent)
+                colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color(0xFFE0E0E0), unfocusedContainerColor = Color(0xFFE0E0E0))
             )
 
-            // Sugerencias
+            // Lista Sugerencias
             if (isSearching && suggestions.isNotEmpty()) {
-                Card(modifier = Modifier.padding(top = 8.dp).fillMaxWidth().heightIn(max = 200.dp), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                Card(modifier = Modifier.padding(top = 8.dp).fillMaxWidth().heightIn(max = 200.dp), shape = RoundedCornerShape(16.dp)) {
                     LazyColumn {
                         items(suggestions) { place ->
                             ListItem(
@@ -96,8 +91,7 @@ fun RoutePlanningScreen(
                                     destLng = place.lon.toDoubleOrNull() ?: 0.0
                                     isSearching = false
                                     viewModel.clearSuggestions()
-                                },
-                                colors = ListItemDefaults.colors(containerColor = Color.White)
+                                }
                             )
                             Divider(color = Color.LightGray)
                         }
@@ -107,7 +101,7 @@ fun RoutePlanningScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Perfil
+            // Perfiles
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 listOf("fastest" to "Rápida", "balanced" to "Balance", "safest" to "Segura").forEach { (id, label) ->
                     FilterChip(
@@ -120,40 +114,21 @@ fun RoutePlanningScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
+            // Botón VER RUTA
             Button(
                 onClick = {
+                    // AQUÍ ES EL CAMBIO CLAVE:
+                    // En lugar de calcular aquí, pasamos las coordenadas al mapa para que él calcule y dibuje
                     if (destLat != 0.0) {
-                        viewModel.calculateRouteFromCoordinates(currentUserLat, currentUserLng, destLat, destLng, safetyProfile)
+                        onRouteCalculated(destLat, destLng)
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
-                enabled = !routeState.isLoading && destLat != 0.0,
+                enabled = destLat != 0.0,
                 shape = RoundedCornerShape(24.dp)
             ) {
-                if (routeState.isLoading) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
-                else Text("VER RUTA", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            }
-
-            // Resultado
-            if (routeState.route != null) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(16.dp)) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text("✅ ¡Ruta Encontrada!", fontWeight = FontWeight.Bold, color = Color.Black)
-                        Text("Distancia: ${(routeState.route?.totalDistance ?: 0.0) / 1000} km", color = Color.Gray)
-                        // Este botón regresa al mapa para que veas la ruta pintada
-                        Button(
-                            onClick = { onRouteCalculated() },
-                            modifier = Modifier.fillMaxWidth().padding(top=8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = darkBlue)
-                        ) { Text("Ver en Mapa") }
-                    }
-                }
-            }
-            if (routeState.error != null) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Error: ${routeState.error}", color = Color.Red)
+                Text("VER RUTA", fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
         }
     }
