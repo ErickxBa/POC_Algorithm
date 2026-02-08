@@ -1,34 +1,25 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { Logger } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
-/**
- * Punto de entrada de la aplicación NestJS
- */
-const logger = new Logger('Bootstrap');
-
-async function main() {
+async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Habilitar CORS
-  app.enableCors({
-    origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    credentials: true
-  });
+  // --- CONFIGURACIÓN SWAGGER ---
+  const config = new DocumentBuilder()
+    .setTitle('Alertify API')
+    .setDescription('API de enrutamiento seguro con Algoritmo LPA* y OpenStreetMap')
+    .setVersion('1.0')
+    .addTag('Graph', 'Gestión del grafo y mapas')
+    .addTag('Routing', 'Cálculo de rutas seguras')
+    .addTag('Incidents', 'Reporte de incidentes')
+    .build();
 
-  // Prefijo global para API
-  app.setGlobalPrefix('api/v1');
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api', app, document);
+  // -----------------------------
 
-  const port = process.env.PORT || 3000;
-  const env = process.env.NODE_ENV || 'development';
-
-  await app.listen(port, () => {
-    logger.log(`Alertify Backend iniciado en puerto ${port}`);
-    logger.log(`Entorno: ${env}`);
-    logger.log(`URL: http://localhost:${port}`);
-    logger.log(`API: http://localhost:${port}/api/v1`);
-  });
+  app.enableCors(); // Importante para que Android pueda conectarse
+  await app.listen(3000);
 }
-
-main();
+bootstrap();

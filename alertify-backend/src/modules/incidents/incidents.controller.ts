@@ -1,10 +1,28 @@
 import { Controller, Post, Get, Body, Query, HttpException, HttpStatus } from '@nestjs/common';
+import { ApiOperation, ApiResponse, ApiTags, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { IncidentsService } from './incidents.service';
 
+@ApiTags('Incidents')
 @Controller('incidents')
 export class IncidentsController {
   constructor(private readonly incidentsService: IncidentsService) {}
 
+  @ApiOperation({ summary: 'Reportar un nuevo incidente en la calle' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        streetId: { type: 'number', example: 1, description: 'ID de la calle' },
+        incidentType: { type: 'string', example: 'robbery', description: 'Tipo de incidente: robbery, accident, police, etc.' },
+        severity: { type: 'number', example: 8, description: 'Nivel de severidad (1-10)' },
+        latitude: { type: 'number', example: -17.783 },
+        longitude: { type: 'number', example: -63.182 },
+        description: { type: 'string', example: 'Robo en la esquina', description: 'Descripción opcional del incidente' }
+      }
+    }
+  })
+  @ApiResponse({ status: 201, description: 'Incidente reportado correctamente' })
+  @ApiResponse({ status: 400, description: 'Error al reportar el incidente' })
   @Post('report')
   async reportIncident(
     @Body() body: {
@@ -42,6 +60,12 @@ export class IncidentsController {
     }
   }
 
+  @ApiOperation({ summary: 'Obtener incidentes cercanos a una ubicación' })
+  @ApiQuery({ name: 'latitude', type: Number, example: -17.783, description: 'Latitud del punto de búsqueda' })
+  @ApiQuery({ name: 'longitude', type: Number, example: -63.182, description: 'Longitud del punto de búsqueda' })
+  @ApiQuery({ name: 'radiusMeters', type: Number, example: 5000, required: false, description: 'Radio de búsqueda en metros (default: 5000)' })
+  @ApiResponse({ status: 200, description: 'Incidentes encontrados correctamente' })
+  @ApiResponse({ status: 400, description: 'Error al buscar incidentes' })
   @Get('nearby')
   async getNearbyIncidents(
     // Usamos @Query porque en Android es un GET con parámetros en URL
